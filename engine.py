@@ -1,5 +1,5 @@
 #!/usr/bin/python
-
+import itertools
 import wx
 import wx.lib.wxcairo
 import cairo
@@ -11,7 +11,6 @@ class DrawingArea(wx.Panel):
 
         self.SetDoubleBuffered(True)
         self.Bind(wx.EVT_PAINT, self.OnPaint)
-        self.num = 0
 
     def OnPaint(self, e):
 
@@ -20,19 +19,11 @@ class DrawingArea(wx.Panel):
         self.DoDrawing(cr)
 
     def DoDrawing(self, cr):
-        if self.num == 0:
-            cr.set_source_rgb (0.2 , 0.23 , 0.9)
-            cr.rectangle(10 , 15, 90, 60)
+        # Draw 5 by five grid
+        cr.set_source_rgb (0.2 , 0.23 , 0.9)
+        for i, j in itertools.product(range(5), range(5)):
+            cr.rectangle(i*30 , j*30, 25, 25)
             cr.fill()
-        elif self.num == 1:
-            cr.set_source_rgb(0.9 , 0.1 , 0.1)
-            cr.rectangle(130 , 15, 90, 60)
-            cr.fill()
-        else:
-            cr.set_source_rgb(0.4 , 0.9 , 0.4)
-            cr.rectangle(250 , 15, 90, 60)
-            cr.fill()
-        self.num = (self.num + 1) % 3
 
 class Frame(wx.Frame):
 
@@ -70,12 +61,12 @@ class Frame(wx.Frame):
         panel.SetSizer(vbox)
 
         midPan = DrawingArea(panel)
-        vbox.Add(midPan, 1, wx.EXPAND | wx.ALL, 12)
+        vbox.Add(midPan, 1, wx.EXPAND | wx.ALL, 2)
 
 
         smallPan = wx.Panel(panel)
         hbox2 = wx.BoxSizer(wx.HORIZONTAL)
-        vbox.Add(smallPan, 1, wx.EXPAND|wx.ALL, 12)
+        vbox.Add(smallPan, 0, wx.EXPAND|wx.ALL, 12)
         smallPan.SetSizer(hbox2)
 
         #----------------------------------------------------
@@ -95,7 +86,7 @@ class Frame(wx.Frame):
         # Set window properties
 
         #~ self.SetSize((1600, 1200))
-        self.SetSize((400, 250))
+        self.SetSize((400, 350))
         #~ self.Maximize()
         self.SetTitle('PROGRAM NAME')
         self.Centre()
