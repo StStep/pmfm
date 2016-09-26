@@ -11,6 +11,7 @@ class DrawingArea(wx.Panel):
 
         self.SetDoubleBuffered(True)
         self.Bind(wx.EVT_PAINT, self.OnPaint)
+        self.num = 0
 
     def OnPaint(self, e):
 
@@ -19,19 +20,19 @@ class DrawingArea(wx.Panel):
         self.DoDrawing(cr)
 
     def DoDrawing(self, cr):
-
-        cr.set_source_rgb (0.2 , 0.23 , 0.9)
-        cr.rectangle(10 , 15, 90, 60)
-        cr.fill()
-
-        cr.set_source_rgb(0.9 , 0.1 , 0.1)
-        cr.rectangle(130 , 15, 90, 60)
-        cr.fill()
-
-        cr.set_source_rgb(0.4 , 0.9 , 0.4)
-        cr.rectangle(250 , 15, 90, 60)
-        cr.fill()
-
+        if self.num == 0:
+            cr.set_source_rgb (0.2 , 0.23 , 0.9)
+            cr.rectangle(10 , 15, 90, 60)
+            cr.fill()
+        elif self.num == 1:
+            cr.set_source_rgb(0.9 , 0.1 , 0.1)
+            cr.rectangle(130 , 15, 90, 60)
+            cr.fill()
+        else:
+            cr.set_source_rgb(0.4 , 0.9 , 0.4)
+            cr.rectangle(250 , 15, 90, 60)
+            cr.fill()
+        self.num = (self.num + 1) % 3
 
 class Frame(wx.Frame):
 
@@ -85,6 +86,11 @@ class Frame(wx.Frame):
 
         hbox2.Add(close_button)
 
+        refresh_button = wx.Button(smallPan, wx.ID_REFRESH)
+        self.Bind(wx.EVT_BUTTON, self.OnRefresh, refresh_button)
+
+        hbox2.Add(refresh_button)
+
         #----------------------------------------------------
         # Set window properties
 
@@ -96,6 +102,9 @@ class Frame(wx.Frame):
 
     def OnQuit(self, e):
         self.Close()
+
+    def OnRefresh(self, e):
+        self.Refresh()
 
 def main():
     ex = wx.App()
