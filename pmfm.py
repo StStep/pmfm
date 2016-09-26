@@ -29,7 +29,7 @@ class Barrier(Element):
         # Get Neigbor to process
         (i, neig) = self.ChooseNeighbor(neighbors)
         # Update cache
-        self.cache[i] = type(neig)
+        self.cache[i] = neig.__class__.__name__
         # Only affect data objects
         if isinstance(neig, Data):
             # TODO Concept of Inside and Outside
@@ -52,7 +52,7 @@ class Medium(Element):
         # Get Neigbor to process
         (i, neig) = self.ChooseNeighbor(neighbors)
         # Update cache
-        self.cache[i] = type(neig)
+        self.cache[i] = neig.__class__.__name__
         # Fork to empty
         if isinstance(neig, Empty):
             neighbors[i] = copy.deepcopy(self)
