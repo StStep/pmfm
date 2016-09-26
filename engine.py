@@ -1,13 +1,20 @@
 #!/usr/bin/python
-import itertools
+import itertools, random
 import wx
 import wx.lib.wxcairo
 import cairo
+
+from pmfm import *
+
+GRID_H = 5
+GRID_W = 5
 
 class DrawingArea(wx.Panel):
 
     def __init__ (self , *args , **kw):
         super(DrawingArea , self).__init__ (*args , **kw)
+        self.field = [[Empty.__name__ for x in range(GRID_W)] for y in
+                      range(GRID_H)]
 
         self.SetDoubleBuffered(True)
         self.Bind(wx.EVT_PAINT, self.OnPaint)
@@ -19,16 +26,23 @@ class DrawingArea(wx.Panel):
         self.DoDrawing(cr)
 
     def DoDrawing(self, cr):
-        # Draw 5 by five grid
-        cr.set_source_rgb (0.2 , 0.23 , 0.9)
-        for i, j in itertools.product(range(5), range(5)):
-            cr.rectangle(i*30 , j*30, 25, 25)
+        # Draw grid
+        for h, w in itertools.product(range(GRID_H), range(GRID_W)):
+            sq = self.field[w][h]
+            if sq == Dead.__name__:
+                cr.set_source_rgb (0.1 , 0.1 , 0.1)
+            elif sq == Medium.__name__:
+                cr.set_source_rgb (0.2 , 0.23 , 0.9)
+            else:
+                cr.set_source_rgb (0.8 , 0.8 , 0.8)
+            cr.rectangle(h*30 , w*30, 25, 25)
             cr.fill()
 
 class Frame(wx.Frame):
 
     def __init__(self, *args, **kwargs):
         super(Frame, self).__init__(*args, **kwargs)
+        self.canvas = None
 
         self.InitUI()
 
@@ -60,8 +74,8 @@ class Frame(wx.Frame):
         vbox = wx.BoxSizer(wx.VERTICAL)
         panel.SetSizer(vbox)
 
-        midPan = DrawingArea(panel)
-        vbox.Add(midPan, 1, wx.EXPAND | wx.ALL, 2)
+        self.canvas = DrawingArea(panel)
+        vbox.Add(self.canvas, 1, wx.EXPAND | wx.ALL, 2)
 
 
         smallPan = wx.Panel(panel)
@@ -95,6 +109,8 @@ class Frame(wx.Frame):
         self.Close()
 
     def OnRefresh(self, e):
+        # Add random dead cell
+        self.canvas.field[random.randint(0, GRID_W - 1)][random.randint(0, GRID_H - 1)] = Dead.__name__
         self.Refresh()
 
 def main():

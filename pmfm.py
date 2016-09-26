@@ -8,7 +8,7 @@ class Element:
 
     def __init__(self):
         self.cache = [None] * NEIGH_NUM
-        self.last_neigh = random.uniform(0, NEIGH_NUM - 1)
+        self.last_neigh = random.randint(0, NEIGH_NUM - 1)
 
     def  ProcAtomicDir(self, neighbors):
         raise NotImplementedError("Please Implement this method")
