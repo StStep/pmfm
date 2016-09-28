@@ -13,7 +13,7 @@ class DrawingArea(wx.Panel):
 
     def __init__ (self , *args , **kw):
         super(DrawingArea , self).__init__ (*args , **kw)
-        self.field = [[Empty.__name__ for x in range(GRID_W)] for y in
+        self.displayField = [[(0.8, 0.8, 0.8) for x in range(GRID_W)] for y in
                       range(GRID_H)]
 
         self.SetDoubleBuffered(True)
@@ -28,21 +28,29 @@ class DrawingArea(wx.Panel):
     def DoDrawing(self, cr):
         # Draw grid
         for h, w in itertools.product(range(GRID_H), range(GRID_W)):
-            sq = self.field[w][h]
-            if sq == Dead.__name__:
-                cr.set_source_rgb (0.1 , 0.1 , 0.1)
-            elif sq == Medium.__name__:
-                cr.set_source_rgb (0.2 , 0.23 , 0.9)
-            else:
-                cr.set_source_rgb (0.8 , 0.8 , 0.8)
+            color = self.displayField[w][h]
+            cr.set_source_rgb(*color)
             cr.rectangle(h*30 , w*30, 25, 25)
             cr.fill()
+
+    def UpdateDisplayField(self, world):
+        for h, w in itertools.product(range(GRID_H), range(GRID_W)):
+            sq = world[w][h]
+            if isinstance(sq, Dead):
+                color = (0.1 , 0.1 , 0.1)
+            elif isinstance(sq, Medium):
+                color = (0.2 , 0.2 , 0.9)
+            else:
+                color = (0.8 , 0.8 , 0.8)
+            self.displayField[w][h] = color
 
 class Frame(wx.Frame):
 
     def __init__(self, *args, **kwargs):
         super(Frame, self).__init__(*args, **kwargs)
         self.canvas = None
+        self.world = [[Empty() for x in range(GRID_W)] for y in
+                      range(GRID_H)]
 
         self.InitUI()
 
@@ -91,10 +99,15 @@ class Frame(wx.Frame):
 
         hbox2.Add(close_button)
 
-        refresh_button = wx.Button(smallPan, wx.ID_REFRESH)
-        self.Bind(wx.EVT_BUTTON, self.OnRefresh, refresh_button)
+        clear_button = wx.Button(smallPan, wx.ID_CLEAR)
+        self.Bind(wx.EVT_BUTTON, self.OnClear, clear_button)
 
-        hbox2.Add(refresh_button)
+        hbox2.Add(clear_button)
+
+        step_button = wx.Button(smallPan, wx.ID_FORWARD)
+        self.Bind(wx.EVT_BUTTON, self.OnStep, step_button)
+
+        hbox2.Add(step_button)
 
         #----------------------------------------------------
         # Set window properties
@@ -108,9 +121,16 @@ class Frame(wx.Frame):
     def OnQuit(self, e):
         self.Close()
 
-    def OnRefresh(self, e):
-        # Add random dead cell
-        self.canvas.field[random.randint(0, GRID_W - 1)][random.randint(0, GRID_H - 1)] = Dead.__name__
+    def OnClear(self, e):
+        self.world = [[Empty() for x in range(GRID_W)] for y in
+                      range(GRID_H)]
+        self.canvas.UpdateDisplayField(self.world)
+        self.Refresh()
+
+    def OnStep(self, e):
+        # Step
+        self.world[random.randint(0, GRID_W - 1)][random.randint(0, GRID_H - 1)] = Dead()
+        self.canvas.UpdateDisplayField(self.world)
         self.Refresh()
 
 def main():
