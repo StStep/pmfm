@@ -26,6 +26,7 @@ class Barrier(Element):
         self.accepted_data_ids = []
 
     def ProcAtomicDir(self, neighbors):
+        update = True
         # Get Neigbor to process
         (i, neig) = self.ChooseNeighbor(neighbors)
         # Update cache
@@ -33,11 +34,10 @@ class Barrier(Element):
         # Only affect data objects
         if isinstance(neig, Data):
             # TODO Concept of Inside and Outside
-            pass
+            update = False
         else:
-            pass
-        # Return edited neigbors
-        return neighbors
+            update = False
+        return update
 
 
 class Medium(Element):
@@ -49,6 +49,7 @@ class Medium(Element):
         self.accepted_dist = []
 
     def ProcAtomicDir(self, neighbors):
+        update = True
         # Get Neigbor to process
         (i, neig) = self.ChooseNeighbor(neighbors)
         # Update cache
@@ -56,15 +57,15 @@ class Medium(Element):
         # Fork to empty
         if isinstance(neig, Empty):
             neighbors[i] = copy.deepcopy(self)
-            pass
         else:
-            pass
+            update = False
+        return update
 
 class PassiveElement(Element):
     """A passive element, does nothing """
 
     def ProcAtomicDir(self, neighbors):
-        pass
+        return False
 
 class Data(PassiveElement):
     """A passive element that holds data"""

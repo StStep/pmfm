@@ -44,15 +44,62 @@ class DrawingArea(wx.Panel):
                 color = (0.8 , 0.8 , 0.8)
             self.displayField[w][h] = color
 
+def GetNeighbors(world, w, h):
+    neighbors = []
+    # Left and Right
+    if(w - 1) < 0:
+        neighbors.append(Dead())
+        neighbors.append(world[w + 1][h])
+    elif(w + 1) > (GRID_W - 1):
+        neighbors.append(world[w - 1][h])
+        neighbors.append(Dead())
+    else:
+        neighbors.append(world[w - 1][h])
+        neighbors.append(world[w + 1][h])
+    # Up and Down
+    if(h - 1) < 0:
+        neighbors.append(world[w][h + 1])
+        neighbors.append(Dead())
+    elif(h + 1) > (GRID_H - 1):
+        neighbors.append(Dead())
+        neighbors.append(world[w][h - 1])
+    else:
+        neighbors.append(world[w][h + 1])
+        neighbors.append(world[w][h - 1])
+    return neighbors
+
+def SetNeighbors(world, w, h, neighbors):
+    # Left and Right
+    if(w - 1) < 0:
+        world[w + 1][h] = neighbors[1]
+    elif(w + 1) > (GRID_W - 1):
+        world[w - 1][h] = neighbors[0]
+    else:
+        world[w - 1][h] = neighbors[0]
+        world[w + 1][h] = neighbors[1]
+    # Up and Down
+    if(h - 1) < 0:
+        world[w][h + 1] = neighbors[2]
+    elif(h + 1) > (GRID_H - 1):
+        world[w][h - 1] = neighbors[3]
+    else:
+        world[w][h + 1] = neighbors[2]
+        world[w][h - 1] = neighbors[3]
+
 class Frame(wx.Frame):
 
     def __init__(self, *args, **kwargs):
         super(Frame, self).__init__(*args, **kwargs)
         self.canvas = None
+        self.ResetWorld()
+        self.InitUI()
+
+    def ResetWorld(self):
         self.world = [[Empty() for x in range(GRID_W)] for y in
                       range(GRID_H)]
+        self.world[random.randint(0, GRID_W - 1)][random.randint(0, GRID_H - 1)] = Medium()
 
-        self.InitUI()
+
 
     def InitUI(self):
         #----------------------------------------------------
@@ -83,6 +130,7 @@ class Frame(wx.Frame):
         panel.SetSizer(vbox)
 
         self.canvas = DrawingArea(panel)
+        self.canvas.UpdateDisplayField(self.world)
         vbox.Add(self.canvas, 1, wx.EXPAND | wx.ALL, 2)
 
 
@@ -122,14 +170,18 @@ class Frame(wx.Frame):
         self.Close()
 
     def OnClear(self, e):
-        self.world = [[Empty() for x in range(GRID_W)] for y in
-                      range(GRID_H)]
+        self.ResetWorld()
         self.canvas.UpdateDisplayField(self.world)
         self.Refresh()
 
     def OnStep(self, e):
         # Step
-        self.world[random.randint(0, GRID_W - 1)][random.randint(0, GRID_H - 1)] = Dead()
+        for h, w in itertools.product(range(GRID_H), range(GRID_W)):
+            neighbors = GetNeighbors(self.world, w, h)
+            if(self.world[w][h].ProcAtomicDir(neighbors)):
+                SetNeighbors(self.world, w, h, neighbors)
+
+        # Update display
         self.canvas.UpdateDisplayField(self.world)
         self.Refresh()
 
