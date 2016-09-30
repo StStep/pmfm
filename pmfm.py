@@ -7,7 +7,7 @@ class Element:
     """The base element class"""
 
     def __init__(self):
-        self.cache = [None] * NEIGH_NUM
+        self.cache = [0] * NEIGH_NUM
         self.last_neigh = random.randint(0, NEIGH_NUM - 1)
 
     def  ProcAtomicDir(self, neighbors):
@@ -50,27 +50,43 @@ class Medium(Element):
         self.dist = 0
 
     def ProcAtomicDir(self, neighbors):
-        update = True
+        update = False
         # Get Neigbor to process
         (i, neig) = self.ChooseNeighbor(neighbors)
-        # Update cache
-        self.cache[i] = neig.__class__.__name__
-        # Fork to empty
+        # Update cache and fork to empty
         if isinstance(neig, Empty):
             neighbors[i] = copy.deepcopy(self)
             if(self.dist != 0):
                 neighbors[i].dist = self.dist + 1
+            update = True
+            self.cache[i] = neighbors[i].dist
         elif isinstance(neig, Medium):
-            if(neig.dist == 0):
-                pass
-            elif(self.dist == 0):
-                self.dist = neig.dist + 1
-            else:
-                self.dist = neig.dist + 1 if ((neig.dist + 1) < self.dist) else self.dist
+            self.cache[i] = neig.dist
         elif isinstance(neig, Barrier):
+            self.cache[i] = -1
+        else:
+            self.cache[i] = 0
+
+        min = 0
+        for x in self.cache:
+            if(x == 0):
+                pass
+            elif(x == -1):
+                min = -1
+            elif(min == 0):
+                min = x
+            elif(x < min):
+                min = x
+            else:
+                pass
+
+        if(min == 0):
+            self.dist = 0;
+        elif(min == -1):
             self.dist = 1
         else:
-            update = False
+            self.dist = min + 1
+
         return update
 
 class PassiveElement(Element):
