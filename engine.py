@@ -13,7 +13,7 @@ class DrawingArea(wx.Panel):
 
     def __init__ (self , *args , **kw):
         super(DrawingArea , self).__init__ (*args , **kw)
-        self.displayField = [[(0.8, 0.8, 0.8) for x in range(GRID_W)] for y in
+        self.displayField = [[((0.8, 0.8, 0.8), "") for x in range(GRID_W)] for y in
                       range(GRID_H)]
 
         self.SetDoubleBuffered(True)
@@ -27,22 +27,32 @@ class DrawingArea(wx.Panel):
 
     def DoDrawing(self, cr):
         # Draw grid
+        cr.set_font_size(15)
         for h, w in itertools.product(range(GRID_H), range(GRID_W)):
-            color = self.displayField[w][h]
+            (color, text) = self.displayField[w][h]
             cr.set_source_rgb(*color)
             cr.rectangle(h*30 , w*30, 25, 25)
             cr.fill()
+            cr.move_to(h*30 + 8, w*30 + 16)
+            cr.set_source_rgb(1, 1, 1)
+            cr.show_text(text)
 
     def UpdateDisplayField(self, world):
         for h, w in itertools.product(range(GRID_H), range(GRID_W)):
             sq = world[w][h]
             if isinstance(sq, Dead):
                 color = (0.1 , 0.1 , 0.1)
+                text = ""
             elif isinstance(sq, Medium):
-                color = (0.2 , 0.2 , 0.9)
+                color = (0.2 , 0.2 , 0.8)
+                text = str(sq.dist)
+            elif isinstance(sq, Barrier):
+                color = (0.8 , 0.1 , 0.1)
+                text = ""
             else:
                 color = (0.8 , 0.8 , 0.8)
-            self.displayField[w][h] = color
+                text = ""
+            self.displayField[w][h] = (color, text)
 
 def GetNeighbors(world, w, h):
     neighbors = []
@@ -98,6 +108,7 @@ class Frame(wx.Frame):
         self.world = [[Empty() for x in range(GRID_W)] for y in
                       range(GRID_H)]
         self.world[random.randint(0, GRID_W - 1)][random.randint(0, GRID_H - 1)] = Medium()
+        self.world[random.randint(0, GRID_W - 1)][random.randint(0, GRID_H - 1)] = Barrier()
 
 
 
@@ -157,11 +168,26 @@ class Frame(wx.Frame):
 
         hbox2.Add(step_button)
 
+        go_button = wx.Button(smallPan, wx.ID_EXECUTE)
+        self.Bind(wx.EVT_BUTTON, self.OnGo, go_button)
+
+        hbox2.Add(go_button)
+
+        dead_button = wx.Button(smallPan, wx.ID_DELETE)
+        self.Bind(wx.EVT_BUTTON, self.OnDead, dead_button)
+
+        hbox2.Add(dead_button)
+
+        barrier_button = wx.Button(smallPan, wx.ID_STOP)
+        self.Bind(wx.EVT_BUTTON, self.OnBarrier, barrier_button)
+
+        hbox2.Add(barrier_button)
+
         #----------------------------------------------------
         # Set window properties
 
         #~ self.SetSize((1600, 1200))
-        self.SetSize((400, 350))
+        self.SetSize((600, 350))
         #~ self.Maximize()
         self.SetTitle('PROGRAM NAME')
         self.Centre()
@@ -182,6 +208,20 @@ class Frame(wx.Frame):
                 SetNeighbors(self.world, w, h, neighbors)
 
         # Update display
+        self.canvas.UpdateDisplayField(self.world)
+        self.Refresh()
+
+    def OnGo(self, e):
+        for x in range(100):
+            self.OnStep(e)
+
+    def OnDead(self, e):
+        self.world[random.randint(0, GRID_W - 1)][random.randint(0, GRID_H - 1)] = Dead()
+        self.canvas.UpdateDisplayField(self.world)
+        self.Refresh()
+
+    def OnBarrier(self, e):
+        self.world[random.randint(0, GRID_W - 1)][random.randint(0, GRID_H - 1)] = Barrier()
         self.canvas.UpdateDisplayField(self.world)
         self.Refresh()
 

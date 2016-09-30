@@ -47,6 +47,7 @@ class Medium(Element):
         Element.__init__(self)
         self.absorbed_data_ids = []
         self.accepted_dist = []
+        self.dist = 0
 
     def ProcAtomicDir(self, neighbors):
         update = True
@@ -57,6 +58,17 @@ class Medium(Element):
         # Fork to empty
         if isinstance(neig, Empty):
             neighbors[i] = copy.deepcopy(self)
+            if(self.dist != 0):
+                neighbors[i].dist = self.dist + 1
+        elif isinstance(neig, Medium):
+            if(neig.dist == 0):
+                pass
+            elif(self.dist == 0):
+                self.dist = neig.dist + 1
+            else:
+                self.dist = neig.dist + 1 if ((neig.dist + 1) < self.dist) else self.dist
+        elif isinstance(neig, Barrier):
+            self.dist = 1
         else:
             update = False
         return update
