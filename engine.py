@@ -1,23 +1,100 @@
 #!/usr/bin/python
 import itertools, random
 import wx
+import wx.lib.intctrl
 import wx.lib.wxcairo
 import cairo
 
 from pmfm import *
 
-GRID_H = 5
-GRID_W = 5
+def GetNeighbors(world, w, h, max_w, max_h):
+    neighbors = []
+    # Left and Right
+    if(w - 1) < 0:
+        neighbors.append(Dead())
+        neighbors.append(world[w + 1][h])
+    elif(w + 1) > (max_w - 1):
+        neighbors.append(world[w - 1][h])
+        neighbors.append(Dead())
+    else:
+        neighbors.append(world[w - 1][h])
+        neighbors.append(world[w + 1][h])
+    # Up and Down
+    if(h - 1) < 0:
+        neighbors.append(world[w][h + 1])
+        neighbors.append(Dead())
+    elif(h + 1) > (max_h - 1):
+        neighbors.append(Dead())
+        neighbors.append(world[w][h - 1])
+    else:
+        neighbors.append(world[w][h + 1])
+        neighbors.append(world[w][h - 1])
+    return neighbors
 
+def SetNeighbors(world, w, h, neighbors, max_w, max_h):
+    # Left and Right
+    if(w - 1) < 0:
+        world[w + 1][h] = neighbors[1]
+    elif(w + 1) > (max_w - 1):
+        world[w - 1][h] = neighbors[0]
+    else:
+        world[w - 1][h] = neighbors[0]
+        world[w + 1][h] = neighbors[1]
+    # Up and Down
+    if(h - 1) < 0:
+        world[w][h + 1] = neighbors[2]
+    elif(h + 1) > (max_h - 1):
+        world[w][h - 1] = neighbors[3]
+    else:
+        world[w][h + 1] = neighbors[2]
+        world[w][h - 1] = neighbors[3]
+
+########################################################################
+class ResizeDialog(wx.Dialog):
+    """"""
+
+    #----------------------------------------------------------------------
+    def __init__(self, width, height):
+        """Constructor"""
+        wx.Dialog.__init__(self, None, title="Resize Dialog")
+
+        w_label =wx.StaticText(self, -1, "Width", style=wx.ALIGN_CENTRE)
+        h_label =wx.StaticText(self, -1, "Height", style=wx.ALIGN_CENTRE)
+        self.intCtrl_W = wx.lib.intctrl.IntCtrl(self)
+        self.intCtrl_W.SetValue(width)
+        self.intCtrl_H = wx.lib.intctrl.IntCtrl(self)
+        self.intCtrl_H.SetValue(height)
+        okBtn = wx.Button(self, wx.ID_OK)
+
+        w_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        w_sizer.Add(w_label)
+        w_sizer.Add(self.intCtrl_W)
+        h_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        h_sizer.Add(h_label)
+        h_sizer.Add(self.intCtrl_H)
+
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(w_sizer, 0, wx.ALL | wx.CENTER, 5)
+        sizer.Add(h_sizer, 0, wx.ALL | wx.CENTER, 5)
+        sizer.Add(okBtn, 0, wx.ALL|wx.CENTER, 5)
+        self.SetSizer(sizer)
+
+
+########################################################################
 class DrawingArea(wx.Panel):
 
-    def __init__ (self , *args , **kw):
+    def __init__ (self, *args , **kw):
         super(DrawingArea , self).__init__ (*args , **kw)
-        self.displayField = [[((0.8, 0.8, 0.8), "") for x in range(GRID_W)] for y in
-                      range(GRID_H)]
-
+        self.w = 0
+        self.h = 0
+        self.displayField = None
         self.SetDoubleBuffered(True)
         self.Bind(wx.EVT_PAINT, self.OnPaint)
+
+    def ResizeField(self, width, height):
+        self.w = width
+        self.h = height
+        self.displayField = [[((0.8, 0.8, 0.8), "") for x in range(self.w)] for y in range(self.h)]
 
     def OnPaint(self, e):
 
@@ -28,7 +105,7 @@ class DrawingArea(wx.Panel):
     def DoDrawing(self, cr):
         # Draw grid
         cr.set_font_size(15)
-        for h, w in itertools.product(range(GRID_H), range(GRID_W)):
+        for h, w in itertools.product(range(self.h), range(self.w)):
             (color, text) = self.displayField[w][h]
             cr.set_source_rgb(*color)
             cr.rectangle(h*30 , w*30, 25, 25)
@@ -38,7 +115,7 @@ class DrawingArea(wx.Panel):
             cr.show_text(text)
 
     def UpdateDisplayField(self, world):
-        for h, w in itertools.product(range(GRID_H), range(GRID_W)):
+        for h, w in itertools.product(range(self.h), range(self.w)):
             sq = world[w][h]
             if isinstance(sq, Dead):
                 color = (0.1 , 0.1 , 0.1)
@@ -54,61 +131,21 @@ class DrawingArea(wx.Panel):
                 text = ""
             self.displayField[w][h] = (color, text)
 
-def GetNeighbors(world, w, h):
-    neighbors = []
-    # Left and Right
-    if(w - 1) < 0:
-        neighbors.append(Dead())
-        neighbors.append(world[w + 1][h])
-    elif(w + 1) > (GRID_W - 1):
-        neighbors.append(world[w - 1][h])
-        neighbors.append(Dead())
-    else:
-        neighbors.append(world[w - 1][h])
-        neighbors.append(world[w + 1][h])
-    # Up and Down
-    if(h - 1) < 0:
-        neighbors.append(world[w][h + 1])
-        neighbors.append(Dead())
-    elif(h + 1) > (GRID_H - 1):
-        neighbors.append(Dead())
-        neighbors.append(world[w][h - 1])
-    else:
-        neighbors.append(world[w][h + 1])
-        neighbors.append(world[w][h - 1])
-    return neighbors
-
-def SetNeighbors(world, w, h, neighbors):
-    # Left and Right
-    if(w - 1) < 0:
-        world[w + 1][h] = neighbors[1]
-    elif(w + 1) > (GRID_W - 1):
-        world[w - 1][h] = neighbors[0]
-    else:
-        world[w - 1][h] = neighbors[0]
-        world[w + 1][h] = neighbors[1]
-    # Up and Down
-    if(h - 1) < 0:
-        world[w][h + 1] = neighbors[2]
-    elif(h + 1) > (GRID_H - 1):
-        world[w][h - 1] = neighbors[3]
-    else:
-        world[w][h + 1] = neighbors[2]
-        world[w][h - 1] = neighbors[3]
-
+########################################################################
 class Frame(wx.Frame):
 
     def __init__(self, *args, **kwargs):
         super(Frame, self).__init__(*args, **kwargs)
         self.canvas = None
+        self.w = 5
+        self.h = 5
         self.ResetWorld()
         self.InitUI()
 
     def ResetWorld(self):
-        self.world = [[Empty() for x in range(GRID_W)] for y in
-                      range(GRID_H)]
-        self.world[random.randint(0, GRID_W - 1)][random.randint(0, GRID_H - 1)] = Medium()
-        self.world[random.randint(0, GRID_W - 1)][random.randint(0, GRID_H - 1)] = Barrier()
+        self.world = [[Empty() for x in range(self.w)] for y in range(self.h)]
+        self.world[random.randint(0, self.w - 1)][random.randint(0, self.h - 1)] = Medium()
+        self.world[random.randint(0, self.w - 1)][random.randint(0, self.h - 1)] = Barrier()
 
 
 
@@ -119,9 +156,15 @@ class Frame(wx.Frame):
         menubar = wx.MenuBar()
         # file menu containing quit menu item
         fileMenu = wx.Menu()
+        # Quit Item
         quit_item = wx.MenuItem(fileMenu, wx.ID_EXIT, '&Quit\tCtrl+W')
         fileMenu.AppendItem(quit_item)
         self.Bind(wx.EVT_MENU, self.OnQuit, quit_item)
+        #Resize Item
+        resize_item = wx.MenuItem(fileMenu, wx.ID_DEFAULT, '&Resize\tCtrl+R')
+        fileMenu.AppendItem(resize_item)
+        self.Bind(wx.EVT_MENU, self.OnResize, resize_item)
+
         menubar.Append(fileMenu, '&File')
 
         # help menu containing about menu item
@@ -141,6 +184,7 @@ class Frame(wx.Frame):
         panel.SetSizer(vbox)
 
         self.canvas = DrawingArea(panel)
+        self.canvas.ResizeField(self.w, self.h)
         self.canvas.UpdateDisplayField(self.world)
         vbox.Add(self.canvas, 1, wx.EXPAND | wx.ALL, 2)
 
@@ -195,6 +239,18 @@ class Frame(wx.Frame):
     def OnQuit(self, e):
         self.Close()
 
+    def OnResize(self, e):
+        dlg = ResizeDialog(self.w, self.h)
+        res = dlg.ShowModal()
+        if res == wx.ID_OK:
+            self.w = dlg.intCtrl_W.GetValue()
+            self.h = dlg.intCtrl_H.GetValue()
+            self.ResetWorld()
+            self.canvas.ResizeField(self.w, self.h)
+            self.canvas.UpdateDisplayField(self.world)
+            self.Refresh()
+        dlg.Destroy()
+
     def OnClear(self, e):
         self.ResetWorld()
         self.canvas.UpdateDisplayField(self.world)
@@ -202,10 +258,10 @@ class Frame(wx.Frame):
 
     def OnStep(self, e):
         # Step
-        for h, w in itertools.product(range(GRID_H), range(GRID_W)):
-            neighbors = GetNeighbors(self.world, w, h)
+        for h, w in itertools.product(range(self.h), range(self.w)):
+            neighbors = GetNeighbors(self.world, w, h, self.w, self.h)
             if(self.world[w][h].ProcAtomicDir(neighbors)):
-                SetNeighbors(self.world, w, h, neighbors)
+                SetNeighbors(self.world, w, h, neighbors, self.w, self.h)
 
         # Update display
         self.canvas.UpdateDisplayField(self.world)
@@ -216,12 +272,12 @@ class Frame(wx.Frame):
             self.OnStep(e)
 
     def OnDead(self, e):
-        self.world[random.randint(0, GRID_W - 1)][random.randint(0, GRID_H - 1)] = Dead()
+        self.world[random.randint(0, self.w - 1)][random.randint(0, self.h - 1)] = Dead()
         self.canvas.UpdateDisplayField(self.world)
         self.Refresh()
 
     def OnBarrier(self, e):
-        self.world[random.randint(0, GRID_W - 1)][random.randint(0, GRID_H - 1)] = Barrier()
+        self.world[random.randint(0, self.w - 1)][random.randint(0, self.h - 1)] = Barrier()
         self.canvas.UpdateDisplayField(self.world)
         self.Refresh()
 
