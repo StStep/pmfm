@@ -1,5 +1,5 @@
 #!/usr/bin/python
-import itertools, random
+import itertools, random, pickle
 import wx
 import wx.lib.intctrl
 import wx.lib.wxcairo
@@ -174,6 +174,14 @@ class Frame(wx.Frame):
         resize_item = wx.MenuItem(fileMenu, wx.ID_DEFAULT, '&Resize\tCtrl+R')
         fileMenu.AppendItem(resize_item)
         self.Bind(wx.EVT_MENU, self.OnResize, resize_item)
+        # Save Item
+        save_item = wx.MenuItem(fileMenu, wx.ID_SAVE, '&Save\tCtrl+S')
+        fileMenu.AppendItem(save_item)
+        self.Bind(wx.EVT_MENU, self.SaveFile, save_item)
+        # Open Item
+        open_item = wx.MenuItem(fileMenu, wx.ID_OPEN, '&Open\tCtrl+O')
+        fileMenu.AppendItem(open_item)
+        self.Bind(wx.EVT_MENU, self.OpenFile, open_item)
 
         menubar.Append(fileMenu, '&File')
 
@@ -227,10 +235,20 @@ class Frame(wx.Frame):
         # Set window properties
 
         #~ self.SetSize((1600, 1200))
-        self.SetSize((600, 350))
+        self.SetSize((600, 500))
         #~ self.Maximize()
         self.SetTitle('PROGRAM NAME')
         self.Centre()
+
+        # Open Default World
+        try:
+            with open("./res/default.p", "rb") as handle:
+                self.w, self.h, self.world = pickle.load(handle)
+                self.canvas.ResizeField(self.w, self.h)
+                self.canvas.UpdateDisplayField(self.world)
+                self.Refresh()
+        except (OSError, IOError):
+            pass
 
     def OnQuit(self, e):
         self.Close()
@@ -246,6 +264,33 @@ class Frame(wx.Frame):
             self.canvas.UpdateDisplayField(self.world)
             self.Refresh()
         dlg.Destroy()
+
+    #----------------------------------------------------------------------
+    def OpenFile(self, event):
+        openFileDialog = wx.FileDialog(self, "Open", "", "",
+                                       "Pickled files (*.p)|*.p",
+                                       wx.FD_OPEN | wx.FD_FILE_MUST_EXIST)
+        res = openFileDialog.ShowModal()
+        if res == wx.ID_OK:
+            path = openFileDialog.GetPath()
+            with open(path, "rb") as handle:
+                self.w, self.h, self.world = pickle.load(handle)
+                self.canvas.ResizeField(self.w, self.h)
+                self.canvas.UpdateDisplayField(self.world)
+                self.Refresh()
+        openFileDialog.Destroy()
+
+    #----------------------------------------------------------------------
+    def SaveFile(self, event):
+        saveFileDialog = wx.FileDialog(self, "Save As", "", "",
+                                       "Pickled files (*.p)|*.p",
+                                       wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
+        res = saveFileDialog.ShowModal()
+        if res == wx.ID_OK:
+            path = saveFileDialog.GetPath()
+            with open(path, "wb") as handle:
+                pickle.dump([self.w, self.h, self.world], handle)
+        saveFileDialog.Destroy()
 
     def OnClear(self, e):
         self.ResetWorld()
