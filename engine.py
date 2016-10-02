@@ -301,7 +301,9 @@ class Frame(wx.Frame):
 
     def OnStep(self, e):
         # Step
-        for w, h in itertools.product(range(self.w), range(self.h)):
+        widths = random.sample(range(self.w), self.w)
+        heights = random.sample(range(self.h), self.h)
+        for w, h in itertools.product(widths, heights):
             neighborHood = GetNeighborHood(self.world, w, h, self.w, self.h)
             self.world[w][h].ProcAtomicDir(neighborHood)
             SetNeighborHood(self.world, w, h, neighborHood, self.w, self.h)
