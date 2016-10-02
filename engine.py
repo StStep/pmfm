@@ -129,9 +129,16 @@ class DrawingArea(wx.Panel):
                 color = (0.1 , 0.1 , 0.1)
             elif isinstance(sq, Medium):
                 color = (0.2 , 0.2 , 0.8)
-                text = str(sq.dist)
+                if(sq.moving_data):
+                    text = "M"
+                else:
+                    text = str(sq.dist)
             elif isinstance(sq, Data):
                 color = (0.2 , 0.8 , 0.2)
+                if(sq.lock > 0):
+                    text = "L"
+                else:
+                    text = ""
             elif isinstance(sq, Barrier):
                 color = (0.8 , 0.1 , 0.1)
             else:
