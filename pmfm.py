@@ -2,21 +2,27 @@ from collections import namedtuple
 import random, copy
 
 NEIGH_NUM = 4
+def enum(*sequential, **named):
+    enums = dict(zip(sequential, range(len(sequential))), **named)
+    return type('Enum', (), enums)
+NeighIndex = enum('CENTER', 'UP', 'RIGHT', 'DOWN', 'LEFT')
 
 class Element:
     """The base element class"""
 
     def __init__(self):
-        self.cache = [0] * NEIGH_NUM
-        self.last_neigh = random.randint(0, NEIGH_NUM - 1)
+        self.cache = [0] * (NEIGH_NUM + 1)
+        self.last_neigh = random.randint(1, NEIGH_NUM)
 
-    def  ProcAtomicDir(self, neighbors):
+    def  ProcAtomicDir(_self, neighborHood):
         raise NotImplementedError("Please Implement this method")
 
-    def ChooseNeighbor(self, neighbors):
+    def ChooseNeighbor(self, neighborHood):
         """Deterministic choice of  one of the neighbors to process"""
-        self.last_neigh = (self.last_neigh + 1) % NEIGH_NUM
-        return (self.last_neigh, neighbors[self.last_neigh])
+        self.last_neigh = self.last_neigh + 1
+        if self.last_neigh > NEIGH_NUM:
+            self.last_neigh = 1
+        return (self.last_neigh, neighborHood[self.last_neigh])
 
 class Barrier(Element):
     """An element that acts the boundry for organs and organisms"""
@@ -25,20 +31,18 @@ class Barrier(Element):
         Element.__init__(self)
         self.accepted_data_ids = []
 
-    def ProcAtomicDir(self, neighbors):
-        update = True
+    def ProcAtomicDir(_self, neighborHood):
+        self = neighborHood[NeighIndex.CENTER]
         # Get Neigbor to process
-        (i, neig) = self.ChooseNeighbor(neighbors)
+        (i, neig) = self.ChooseNeighbor(neighborHood)
         # Update cache
         self.cache[i] = neig.__class__.__name__
         # Only affect data objects
         if isinstance(neig, Data):
             # TODO Concept of Inside and Outside
-            update = False
+            pass
         else:
-            update = False
-        return update
-
+            pass
 
 class Medium(Element):
     """An element that acts as a transportation medium for other elements"""
@@ -48,18 +52,20 @@ class Medium(Element):
         self.absorbed_data_ids = []
         self.accepted_dist = []
         self.dist = 0
+        self.moving_data = False
+        self.mv_src = 0
+        self.mv_dest = 0
 
-    def ProcAtomicDir(self, neighbors):
-        update = False
+    def ProcAtomicDir(_self, neighborHood):
+        self = neighborHood[NeighIndex.CENTER]
         # Get Neigbor to process
-        (i, neig) = self.ChooseNeighbor(neighbors)
+        (i, neig) = self.ChooseNeighbor(neighborHood)
         # Update cache and fork to empty
         if isinstance(neig, Empty):
-            neighbors[i] = copy.deepcopy(self)
+            neighborHood[i] = copy.deepcopy(self)
             if(self.dist != 0):
-                neighbors[i].dist = self.dist + 1
-            update = True
-            self.cache[i] = neighbors[i].dist
+                neighborHood[i].dist = self.dist + 1
+            self.cache[i] = neighborHood[i].dist
         elif isinstance(neig, Medium):
             self.cache[i] = neig.dist
         elif isinstance(neig, Barrier):
@@ -87,13 +93,11 @@ class Medium(Element):
         else:
             self.dist = min + 1
 
-        return update
-
 class PassiveElement(Element):
     """A passive element, does nothing """
 
-    def ProcAtomicDir(self, neighbors):
-        return False
+    def ProcAtomicDir(_self, neighborHood):
+        pass;
 
 class Data(PassiveElement):
     """A passive element that holds data"""
@@ -101,6 +105,7 @@ class Data(PassiveElement):
     def __init__(self, ID):
         PassiveElement.__init__(self)
         self.ID = ID
+        self.lock = False
 
 class Empty(PassiveElement):
     """A passive element that represents an empty location"""

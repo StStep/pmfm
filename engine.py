@@ -7,47 +7,41 @@ import cairo
 
 from pmfm import *
 
-def GetNeighbors(world, w, h, max_w, max_h):
-    neighbors = []
+def GetNeighborHood(world, w, h, max_w, max_h):
+    neighborHood = [Dead()] * (NEIGH_NUM + 1)
+    neighborHood[NeighIndex.CENTER] = world[w][h]
     # Left and Right
-    if(w - 1) < 0:
-        neighbors.append(Dead())
-        neighbors.append(world[w + 1][h])
-    elif(w + 1) > (max_w - 1):
-        neighbors.append(world[w - 1][h])
-        neighbors.append(Dead())
-    else:
-        neighbors.append(world[w - 1][h])
-        neighbors.append(world[w + 1][h])
-    # Up and Down
-    if(h - 1) < 0:
-        neighbors.append(world[w][h + 1])
-        neighbors.append(Dead())
-    elif(h + 1) > (max_h - 1):
-        neighbors.append(Dead())
-        neighbors.append(world[w][h - 1])
-    else:
-        neighbors.append(world[w][h + 1])
-        neighbors.append(world[w][h - 1])
-    return neighbors
+    if(w + 1) < max_w:
+        neighborHood[NeighIndex.RIGHT] = world[w + 1][h]
 
-def SetNeighbors(world, w, h, neighbors, max_w, max_h):
-    # Left and Right
-    if(w - 1) < 0:
-        world[w + 1][h] = neighbors[1]
-    elif(w + 1) > (max_w - 1):
-        world[w - 1][h] = neighbors[0]
-    else:
-        world[w - 1][h] = neighbors[0]
-        world[w + 1][h] = neighbors[1]
+    if w > 0:
+        neighborHood[NeighIndex.LEFT] = world[w - 1][h]
+
     # Up and Down
-    if(h - 1) < 0:
-        world[w][h + 1] = neighbors[2]
-    elif(h + 1) > (max_h - 1):
-        world[w][h - 1] = neighbors[3]
-    else:
-        world[w][h + 1] = neighbors[2]
-        world[w][h - 1] = neighbors[3]
+    if(h + 1) < max_h:
+        neighborHood[NeighIndex.DOWN] = world[w][h + 1]
+
+    if h > 0:
+        neighborHood[NeighIndex.UP] = world[w][h - 1]
+
+    return neighborHood
+
+def SetNeighborHood(world, w, h, neighborHood, max_w, max_h):
+
+    world[w][h] = neighborHood[NeighIndex.CENTER]
+    # Left and Right
+    if(w + 1) < max_w:
+        world[w + 1][h] = neighborHood[NeighIndex.RIGHT]
+
+    if w > 0:
+        world[w - 1][h] =  neighborHood[NeighIndex.LEFT]
+
+    # Up and Down
+    if(h + 1) < max_h:
+        world[w][h + 1] =  neighborHood[NeighIndex.DOWN]
+
+    if h > 0:
+        world[w][h - 1] =  neighborHood[NeighIndex.UP]
 
 ########################################################################
 class ResizeDialog(wx.Dialog):
@@ -109,7 +103,7 @@ class DrawingArea(wx.Panel):
         pos = e.GetPosition()
         w = pos[0]//self.WIDTH
         h = pos[1]//self.HIEGHT
-        if(h >= self.h) | (w >= self.w):
+        if(h >= self.h) or (w >= self.w):
             raise IndexError
         return (w, h)
 
@@ -130,18 +124,18 @@ class DrawingArea(wx.Panel):
     def UpdateDisplayField(self, world):
         for w, h in itertools.product(range(self.w), range(self.h)):
             sq = world[w][h]
+            text = ""
             if isinstance(sq, Dead):
                 color = (0.1 , 0.1 , 0.1)
-                text = ""
             elif isinstance(sq, Medium):
                 color = (0.2 , 0.2 , 0.8)
                 text = str(sq.dist)
+            elif isinstance(sq, Data):
+                color = (0.2 , 0.8 , 0.2)
             elif isinstance(sq, Barrier):
                 color = (0.8 , 0.1 , 0.1)
-                text = ""
             else:
                 color = (0.8 , 0.8 , 0.8)
-                text = ""
             self.displayField[w][h] = (color, text)
 
 ########################################################################
@@ -228,7 +222,8 @@ class Frame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnGo, go_button)
         hbox2.Add(go_button)
 
-        self.elem_sel = wx.RadioBox(smallPan, choices=("Barrier","Medium", "Dead"))
+        self.elem_sel = wx.RadioBox(smallPan, choices=("Barrier","Medium",
+                                                       "Dead", "Data"))
         hbox2.Add(self.elem_sel)
 
         #----------------------------------------------------
@@ -300,9 +295,9 @@ class Frame(wx.Frame):
     def OnStep(self, e):
         # Step
         for w, h in itertools.product(range(self.w), range(self.h)):
-            neighbors = GetNeighbors(self.world, w, h, self.w, self.h)
-            if(self.world[w][h].ProcAtomicDir(neighbors)):
-                SetNeighbors(self.world, w, h, neighbors, self.w, self.h)
+            neighborHood = GetNeighborHood(self.world, w, h, self.w, self.h)
+            self.world[w][h].ProcAtomicDir(neighborHood)
+            SetNeighborHood(self.world, w, h, neighborHood, self.w, self.h)
 
         # Update display
         self.canvas.UpdateDisplayField(self.world)
@@ -335,6 +330,8 @@ class Frame(wx.Frame):
             elem = Medium()
         elif self.elem_sel.GetStringSelection() == "Dead":
             elem = Dead()
+        elif self.elem_sel.GetStringSelection() == "Data":
+            elem = Data(1)
         else:
             elem = Empty()
         self.world[w][h] = elem
