@@ -83,6 +83,10 @@ class ResizeDialog(wx.Dialog):
 ########################################################################
 class DrawingArea(wx.Panel):
 
+    WIDTH = 30
+    HIEGHT = 30
+    GAP = 5
+
     def __init__ (self, *args , **kw):
         super(DrawingArea , self).__init__ (*args , **kw)
         self.w = 0
@@ -94,28 +98,35 @@ class DrawingArea(wx.Panel):
     def ResizeField(self, width, height):
         self.w = width
         self.h = height
-        self.displayField = [[((0.8, 0.8, 0.8), "") for x in range(self.w)] for y in range(self.h)]
+        self.displayField = [[((0.8, 0.8, 0.8), "")]*self.h for i in range(self.w)]
 
     def OnPaint(self, e):
-
         dc = wx.PaintDC(self)
         cr = wx.lib.wxcairo.ContextFromDC(dc)
         self.DoDrawing(cr)
 
+    def GetWorldCoord(self, e):
+        pos = e.GetPosition()
+        w = pos[0]//self.WIDTH
+        h = pos[1]//self.HIEGHT
+        return (w, h)
+
     def DoDrawing(self, cr):
         # Draw grid
         cr.set_font_size(15)
-        for h, w in itertools.product(range(self.h), range(self.w)):
+        for w, h in itertools.product(range(self.w), range(self.h)):
             (color, text) = self.displayField[w][h]
             cr.set_source_rgb(*color)
-            cr.rectangle(h*30 , w*30, 25, 25)
+            cr.rectangle(w*DrawingArea.WIDTH , h*DrawingArea.HIEGHT,
+                         DrawingArea.WIDTH - DrawingArea.GAP,
+                         DrawingArea.HIEGHT - DrawingArea.GAP)
             cr.fill()
-            cr.move_to(h*30 + 8, w*30 + 16)
+            cr.move_to(w*DrawingArea.WIDTH + 8, h*DrawingArea.HIEGHT + 17)
             cr.set_source_rgb(1, 1, 1)
             cr.show_text(text)
 
     def UpdateDisplayField(self, world):
-        for h, w in itertools.product(range(self.h), range(self.w)):
+        for w, h in itertools.product(range(self.w), range(self.h)):
             sq = world[w][h]
             if isinstance(sq, Dead):
                 color = (0.1 , 0.1 , 0.1)
@@ -143,11 +154,7 @@ class Frame(wx.Frame):
         self.InitUI()
 
     def ResetWorld(self):
-        self.world = [[Empty() for x in range(self.w)] for y in range(self.h)]
-        self.world[random.randint(0, self.w - 1)][random.randint(0, self.h - 1)] = Medium()
-        self.world[random.randint(0, self.w - 1)][random.randint(0, self.h - 1)] = Barrier()
-
-
+        self.world = [[Empty()]*self.h for i in range(self.w)]
 
     def InitUI(self):
         #----------------------------------------------------
@@ -258,7 +265,7 @@ class Frame(wx.Frame):
 
     def OnStep(self, e):
         # Step
-        for h, w in itertools.product(range(self.h), range(self.w)):
+        for w, h in itertools.product(range(self.w), range(self.h)):
             neighbors = GetNeighbors(self.world, w, h, self.w, self.h)
             if(self.world[w][h].ProcAtomicDir(neighbors)):
                 SetNeighbors(self.world, w, h, neighbors, self.w, self.h)
