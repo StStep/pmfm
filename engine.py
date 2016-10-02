@@ -148,6 +148,7 @@ class Frame(wx.Frame):
     def __init__(self, *args, **kwargs):
         super(Frame, self).__init__(*args, **kwargs)
         self.canvas = None
+        self.elem_sel = None
         self.w = 5
         self.h = 5
         self.ResetWorld()
@@ -193,8 +194,9 @@ class Frame(wx.Frame):
         self.canvas = DrawingArea(panel)
         self.canvas.ResizeField(self.w, self.h)
         self.canvas.UpdateDisplayField(self.world)
+        self.canvas.Bind(wx.EVT_LEFT_UP, self.OnCanvasLClick)
+        self.canvas.Bind(wx.EVT_RIGHT_UP, self.OnCanvasRClick)
         vbox.Add(self.canvas, 1, wx.EXPAND | wx.ALL, 2)
-
 
         smallPan = wx.Panel(panel)
         hbox2 = wx.BoxSizer(wx.HORIZONTAL)
@@ -204,35 +206,20 @@ class Frame(wx.Frame):
         #----------------------------------------------------
         # Place buttons in correct box corresponding with panel
 
-        close_button = wx.Button(smallPan, wx.ID_CLOSE)
-        self.Bind(wx.EVT_BUTTON, self.OnQuit, close_button)
-
-        hbox2.Add(close_button)
-
         clear_button = wx.Button(smallPan, wx.ID_CLEAR)
         self.Bind(wx.EVT_BUTTON, self.OnClear, clear_button)
-
         hbox2.Add(clear_button)
 
         step_button = wx.Button(smallPan, wx.ID_FORWARD)
         self.Bind(wx.EVT_BUTTON, self.OnStep, step_button)
-
         hbox2.Add(step_button)
 
         go_button = wx.Button(smallPan, wx.ID_EXECUTE)
         self.Bind(wx.EVT_BUTTON, self.OnGo, go_button)
-
         hbox2.Add(go_button)
 
-        dead_button = wx.Button(smallPan, wx.ID_DELETE)
-        self.Bind(wx.EVT_BUTTON, self.OnDead, dead_button)
-
-        hbox2.Add(dead_button)
-
-        barrier_button = wx.Button(smallPan, wx.ID_STOP)
-        self.Bind(wx.EVT_BUTTON, self.OnBarrier, barrier_button)
-
-        hbox2.Add(barrier_button)
+        self.elem_sel = wx.RadioBox(smallPan, choices=("Barrier","Medium", "Dead"))
+        hbox2.Add(self.elem_sel)
 
         #----------------------------------------------------
         # Set window properties
@@ -278,13 +265,25 @@ class Frame(wx.Frame):
         for x in range(100):
             self.OnStep(e)
 
-    def OnDead(self, e):
-        self.world[random.randint(0, self.w - 1)][random.randint(0, self.h - 1)] = Dead()
+    def OnCanvasRClick(self, e):
+        w, h = self.canvas.GetWorldCoord(e)
+        self.world[w][h] = Empty()
+        # Update display
         self.canvas.UpdateDisplayField(self.world)
         self.Refresh()
 
-    def OnBarrier(self, e):
-        self.world[random.randint(0, self.w - 1)][random.randint(0, self.h - 1)] = Barrier()
+    def OnCanvasLClick(self, e):
+        w, h = self.canvas.GetWorldCoord(e)
+        if self.elem_sel.GetStringSelection() == "Barrier":
+            elem = Barrier()
+        elif self.elem_sel.GetStringSelection() == "Medium":
+            elem = Medium()
+        elif self.elem_sel.GetStringSelection() == "Dead":
+            elem = Dead()
+        else:
+            elem = Empty()
+        self.world[w][h] = elem
+        # Update display
         self.canvas.UpdateDisplayField(self.world)
         self.Refresh()
 
