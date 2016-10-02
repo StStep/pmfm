@@ -109,6 +109,8 @@ class DrawingArea(wx.Panel):
         pos = e.GetPosition()
         w = pos[0]//self.WIDTH
         h = pos[1]//self.HIEGHT
+        if(h >= self.h) | (w >= self.w):
+            raise IndexError
         return (w, h)
 
     def DoDrawing(self, cr):
@@ -266,14 +268,22 @@ class Frame(wx.Frame):
             self.OnStep(e)
 
     def OnCanvasRClick(self, e):
-        w, h = self.canvas.GetWorldCoord(e)
+        try:
+            w, h = self.canvas.GetWorldCoord(e)
+        except IndexError:
+            return None
+
         self.world[w][h] = Empty()
         # Update display
         self.canvas.UpdateDisplayField(self.world)
         self.Refresh()
 
     def OnCanvasLClick(self, e):
-        w, h = self.canvas.GetWorldCoord(e)
+        try:
+            w, h = self.canvas.GetWorldCoord(e)
+        except IndexError:
+            return None
+
         if self.elem_sel.GetStringSelection() == "Barrier":
             elem = Barrier()
         elif self.elem_sel.GetStringSelection() == "Medium":
